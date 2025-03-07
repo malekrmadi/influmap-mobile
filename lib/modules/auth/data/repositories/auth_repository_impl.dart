@@ -28,4 +28,11 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ServerFailure("Erreur lors de l'inscription : ${e.toString()}"));
     }
   }
+ @override
+  Future<Either<Failure, void>> logout() async {
+    print("Déconnexion réussie");
+    return Right(null);
+  
+  }
+
 }
