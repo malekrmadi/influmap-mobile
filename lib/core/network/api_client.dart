@@ -35,14 +35,22 @@ class ApiClient {
   }
 
   // Signup function
-  Future<Map<String, dynamic>> signup(String username, String email, String password, String avatar, String bio) async {
-    print("🔍 Debug: signup URL before calling post: $baseUrl$signupEndpoint");
+Future<Map<String, dynamic>> signup(
+      String username,
+      String email,
+      String password,
+      String avatar,
+      String bio,
+      int level,
+      List<String> badges) async {
     return await post(signupEndpoint, {
       "username": username,
       "email": email,
       "password": password,
       "avatar": avatar,
-      "bio": bio
+      "bio": bio,
+      "level": level,
+      "badges": badges,
     });
   }
 }

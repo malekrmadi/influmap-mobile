@@ -27,7 +27,7 @@ class AuthRemoteDataSource {
   }
 
   Future<UserModel> signup(String username, String email, String password, String avatar, String bio ,int level ,List<String> badges) async {
-    final response = await apiClient.signup(username, email, password, avatar, bio);
+    final response = await apiClient.signup(username, email, password, avatar, bio ,level ,badges);
 
     if (response.containsKey('user')) {
       final user = UserModel.fromJson(response['user']);
