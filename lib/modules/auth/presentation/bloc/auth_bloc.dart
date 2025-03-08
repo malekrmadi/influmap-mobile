@@ -13,11 +13,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
+    print("LoginRequested event received: ${event.email}, ${event.password}");
     emit(AuthLoading());
     final result = await repository.login(event.email, event.password);
     result.fold(
-      (failure) => emit(AuthFailure("Login Failed")),
-      (user) => emit(AuthSuccess(user)),
+     (failure) {
+      print("Login failed: $failure");
+      emit(AuthFailure("Login Failed"));
+    },
+    (user) {
+      print("Login successful: ${user.email}");
+      emit(AuthSuccess(user));
+    },
     );
   }
 

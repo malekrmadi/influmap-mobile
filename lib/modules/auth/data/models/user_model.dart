@@ -10,10 +10,10 @@ class UserModel extends User {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      username: json['username'],
-      email: json['email'],
-      token: json['token'],
+      id: json['_id'] ?? "", // L'API utilise "_id" au lieu de "id"
+      username: json['username'] ?? "Inconnu",
+      email: json['email'] ?? "Aucun email",
+      token: json['token'] ?? "", // Vérifier si l'API renvoie bien ce champ
     );
   }
 }
