@@ -30,7 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSignupRequested(SignupRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    final result = await repository.signup(event.username, event.email, event.password);
+    final result = await repository.signup(event.username, event.email, event.password , event.avatar ,event.bio ,event.level ,event.badges);
     result.fold(
       (failure) => emit(AuthFailure("Signup Failed")),
       (user) => emit(AuthSuccess(user)),

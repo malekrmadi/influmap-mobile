@@ -7,24 +7,33 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource(this.apiClient);
 
   Future<UserModel> login(String email, String password) async {
-    final response = await apiClient.post("/login", {"email": email, "password": password});
+    final response = await apiClient.login(email, password);
 
     if (response.containsKey('user')) {
-      final user = UserModel.fromJson(response['user']); // On passe seulement "user"
+      final user = UserModel.fromJson(response['user']);
       return UserModel(
         id: user.id,
         username: user.username,
         email: user.email,
-        token: response['token'] ?? "", // On ajoute le token séparément
+        token: response['token'] ?? "", // Ajout du token manuellement
+        avatar: user.avatar,
+        bio: user.bio,
+        level: user.level,
+        badges: user.badges,
       );
     } else {
       throw Exception("Format de réponse invalide: $response");
     }
   }
 
+  Future<UserModel> signup(String username, String email, String password, String avatar, String bio ,int level ,List<String> badges) async {
+    final response = await apiClient.signup(username, email, password, avatar, bio);
 
-  Future<UserModel> signup(String username, String email, String password) async {
-    final response = await apiClient.post("/signup", {"username": username, "email": email, "password": password});
-    return UserModel.fromJson(response);
+    if (response.containsKey('user')) {
+      final user = UserModel.fromJson(response['user']);
+      return user;
+    } else {
+      throw Exception("Format de réponse invalide: $response");
+    }
   }
 }

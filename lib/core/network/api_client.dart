@@ -4,10 +4,11 @@ import 'dart:convert';
 class ApiClient {
   final String baseUrl = "http://10.0.2.2:5001"; // Backend base URL
   final String loginEndpoint = "/api/users/login"; // Login endpoint
+  final String signupEndpoint = "/api/users/signup"; // Signup endpoint
 
   // General method for making POST requests
   Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
-    final url = Uri.parse("$baseUrl$loginEndpoint"); // Full URL for the request
+    final url = Uri.parse("$baseUrl$endpoint"); // Full URL for the request
     print("🔹 Sending POST request to: $url");
     print("📤 Request Body: ${jsonEncode(body)}");
 
@@ -31,5 +32,17 @@ class ApiClient {
   Future<Map<String, dynamic>> login(String email, String password) async {
     print("🔍 Debug: login URL before calling post: $baseUrl$loginEndpoint");
     return await post(loginEndpoint, {"email": email, "password": password});
+  }
+
+  // Signup function
+  Future<Map<String, dynamic>> signup(String username, String email, String password, String avatar, String bio) async {
+    print("🔍 Debug: signup URL before calling post: $baseUrl$signupEndpoint");
+    return await post(signupEndpoint, {
+      "username": username,
+      "email": email,
+      "password": password,
+      "avatar": avatar,
+      "bio": bio
+    });
   }
 }

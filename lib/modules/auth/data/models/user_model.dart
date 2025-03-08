@@ -6,14 +6,31 @@ class UserModel extends User {
     required String username,
     required String email,
     required String token,
-  }) : super(id: id, username: username, email: email, token: token);
+    required String avatar,
+    required String bio,
+    required int level,
+    required List<String> badges,
+  }) : super(
+          id: id,
+          username: username,
+          email: email,
+          token: token,
+          avatar: avatar,
+          bio: bio,
+          level: level,
+          badges: badges,
+        );
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['_id'] ?? "", // L'API utilise "_id" au lieu de "id"
+      id: json['_id'] ?? "", // L'ID est stocké sous "_id"
       username: json['username'] ?? "Inconnu",
       email: json['email'] ?? "Aucun email",
-      token: json['token'] ?? "", // Vérifier si l'API renvoie bien ce champ
+      token: json['token'] ?? "", // Le token est parfois hors de l'objet "user"
+      avatar: json['avatar'] ?? "",
+      bio: json['bio'] ?? "",
+      level: json['level'] ?? 0,
+      badges: (json['badges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 }
