@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/place_model.dart';
+import '../../domain/models/user_model.dart';
 
-/// A widget that displays a place card with image, rating, and details
-class PlaceCard extends StatelessWidget {
-  final Place place;
+class UserCard extends StatelessWidget {
+  final User user;
   final bool isHovered;
   final VoidCallback onViewDetails;
 
-  const PlaceCard({
+  const UserCard({
     Key? key,
-    required this.place,
+    required this.user,
     required this.isHovered,
     required this.onViewDetails,
   }) : super(key: key);
@@ -25,10 +24,10 @@ class PlaceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image section - using a placeholder based on category
+          // Avatar section
           AspectRatio(
             aspectRatio: 1.5,
-            child: _buildPlaceholderImage(place.category),
+            child: _buildUserAvatar(user),
           ),
           
           // Content section
@@ -38,9 +37,9 @@ class PlaceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
+                  // Username
                   Text(
-                    place.name,
+                    user.username,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -50,14 +49,14 @@ class PlaceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   
-                  // Location
+                  // Email
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                      const Icon(Icons.email, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          '${place.location.latitude}, ${place.location.longitude}',
+                          user.email,
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
@@ -70,23 +69,15 @@ class PlaceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   
-                  // Rating
+                  // Level
                   Row(
                     children: [
                       const Icon(Icons.star, size: 14, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        '${place.rating}',
+                        'Level ${user.level}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${place.reviewsCount} reviews)',
-                        style: TextStyle(
-                          color: Colors.grey[600],
                           fontSize: 12,
                         ),
                       ),
@@ -107,7 +98,7 @@ class PlaceCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('View Details'),
+                      child: const Text('View Profile'),
                     ),
                   ),
                 ],
@@ -119,36 +110,44 @@ class PlaceCard extends StatelessWidget {
     );
   }
   
-  Widget _buildPlaceholderImage(String category) {
-    // Create a placeholder image based on category
-    IconData iconData;
-    Color backgroundColor;
-    
-    switch (category) {
-      case 'Restaurant':
-        iconData = Icons.restaurant;
-        backgroundColor = Colors.orange.shade200;
-        break;
-      case 'Café':
-        iconData = Icons.coffee;
-        backgroundColor = Colors.brown.shade200;
-        break;
-      case 'Bar':
-        iconData = Icons.local_bar;
-        backgroundColor = Colors.purple.shade200;
-        break;
-      default:
-        iconData = Icons.place;
-        backgroundColor = Colors.blue.shade200;
+  Widget _buildUserAvatar(User user) {
+    if (user.avatar != null && user.avatar!.isNotEmpty) {
+      return Image.network(
+        user.avatar!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildAvatarPlaceholder(user);
+        },
+      );
+    } else {
+      return _buildAvatarPlaceholder(user);
     }
+  }
+  
+  Widget _buildAvatarPlaceholder(User user) {
+    final colors = [
+      Colors.blue.shade200,
+      Colors.green.shade200,
+      Colors.purple.shade200,
+      Colors.orange.shade200,
+      Colors.teal.shade200,
+    ];
+    
+    // Use the first character of the username to select a color
+    final colorIndex = user.username.isNotEmpty 
+        ? user.username.codeUnitAt(0) % colors.length 
+        : 0;
     
     return Container(
-      color: backgroundColor,
+      color: colors[colorIndex],
       child: Center(
-        child: Icon(
-          iconData,
-          size: 50,
-          color: Colors.white,
+        child: Text(
+          user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
+          style: const TextStyle(
+            fontSize: 50,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

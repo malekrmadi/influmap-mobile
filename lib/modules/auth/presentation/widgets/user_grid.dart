@@ -1,37 +1,30 @@
 import 'package:flutter/material.dart';
-import '../../domain/models/place_model.dart';
-import 'place_card.dart';
+import '../../domain/models/user_model.dart';
+import 'user_card.dart';
 
-/// A widget that displays a grid of place cards for a selected category
-class CategoryGrid extends StatefulWidget {
-  final List<Place> places;
-  final String selectedCategory;
-  final Function(Place) onPlaceSelected;
+/// A widget that displays a grid of user cards
+class UserGrid extends StatefulWidget {
+  final List<User> users;
+  final Function(User) onUserSelected;
 
-  const CategoryGrid({
+  const UserGrid({
     Key? key,
-    required this.places,
-    required this.selectedCategory,
-    required this.onPlaceSelected,
+    required this.users,
+    required this.onUserSelected,
   }) : super(key: key);
 
   @override
-  State<CategoryGrid> createState() => _CategoryGridState();
+  State<UserGrid> createState() => _UserGridState();
 }
 
-class _CategoryGridState extends State<CategoryGrid> {
+class _UserGridState extends State<UserGrid> {
   int _hoveredCardIndex = -1;
 
   @override
   Widget build(BuildContext context) {
-    // Filter places by selected category
-    final filteredPlaces = widget.places
-        .where((place) => place.category == widget.selectedCategory)
-        .toList();
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: filteredPlaces.isEmpty
+      child: widget.users.isEmpty
           ? _buildEmptyState()
           : GridView.builder(
               physics: const NeverScrollableScrollPhysics(),
@@ -42,9 +35,9 @@ class _CategoryGridState extends State<CategoryGrid> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              itemCount: filteredPlaces.length,
+              itemCount: widget.users.length,
               itemBuilder: (context, index) {
-                final place = filteredPlaces[index];
+                final user = widget.users[index];
                 return MouseRegion(
                   onEnter: (_) => setState(() => _hoveredCardIndex = index),
                   onExit: (_) => setState(() => _hoveredCardIndex = -1),
@@ -53,10 +46,10 @@ class _CategoryGridState extends State<CategoryGrid> {
                     curve: Curves.easeOutQuint,
                     transform: Matrix4.identity()
                       ..translate(0.0, _hoveredCardIndex == index ? -5.0 : 0.0),
-                    child: PlaceCard(
-                      place: place,
+                    child: UserCard(
+                      user: user,
                       isHovered: _hoveredCardIndex == index,
-                      onViewDetails: () => widget.onPlaceSelected(place),
+                      onViewDetails: () => widget.onUserSelected(user),
                     ),
                   ),
                 );
@@ -77,7 +70,7 @@ class _CategoryGridState extends State<CategoryGrid> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Aucun établissement trouvé dans cette catégorie',
+            'Aucun utilisateur trouvé',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,

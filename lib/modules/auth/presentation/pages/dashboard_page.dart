@@ -4,11 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:auth/modules/auth/presentation/bloc/auth_bloc.dart';
 import 'package:auth/modules/auth/presentation/bloc/auth_event.dart';
 import 'package:flutter/services.dart';
+import 'package:auth/setup_locator.dart';
 import 'login_page.dart';
+import 'place_details_page.dart';
+import 'user_details_page.dart';
 
 // Import the extracted widgets and theme
 import '../../../../core/theme/app_theme.dart';
 import '../widgets/index.dart';
+import '../../domain/models/place_model.dart';
+import '../../domain/models/user_model.dart';
+import '../../domain/repositories/place_repository.dart';
+import '../../domain/repositories/user_repository.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -17,46 +24,67 @@ class DashboardPage extends StatefulWidget {
   _DashboardPageState createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with SingleTickerProviderStateMixin {
-  String selectedCategory = "Restaurant";
+class _DashboardPageState extends State<DashboardPage> with TickerProviderStateMixin {
+  late final UserRepository _userRepository;
+  late final PlaceRepository _placeRepository;
+  late Future<List<User>> _usersFuture;
+  late Future<List<Place>> _placesFuture;
+  String _selectedCategory = 'Restaurant';
+  late TabController _tabController;
   late AnimationController _animationController;
   bool _isDarkMode = false;
-
-  final List<Map<String, dynamic>> profiles = List.generate(10, (index) => {
-    "name": "Personne $index",
-    "tag": "Tag $index",
-    "image": Icons.person,
-  });
-
-  final Map<String, List<Map<String, String>>> categories = {
-    "Restaurant": List.generate(6, (index) => {
-      "image": "assets/images/restaurant.png",
-      "address": "Restaurant $index",
-      "description": "Cuisine délicieuse et ambiance chaleureuse",
-    }),
-    "Café": List.generate(6, (index) => {
-      "image": "assets/images/cafe.png",
-      "address": "Café $index",
-      "description": "Ambiance cosy et bon café",
-    }),
-    "Bar": List.generate(6, (index) => {
-      "image": "assets/images/bar.png",
-      "address": "Bar $index",
-      "description": "Cocktails et bonne musique",
-    }),
-  };
+  bool _isLoading = true;
+  String _errorMessage = '';
+  
+  List<Place> _places = [];
+  List<User> _users = [];
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _userRepository = sl<UserRepository>();
+    _placeRepository = sl<PlaceRepository>();
+    _usersFuture = _userRepository.getAllUsers();
+    _placesFuture = _placeRepository.getAllPlaces();
+    _tabController = TabController(length: 2, vsync: this);
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _loadData();
+  }
+  
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    
+    try {
+      final places = await _placesFuture;
+      final users = await _usersFuture;
+      
+      // For demo purposes, set the first user as current user
+      final currentUser = users.isNotEmpty ? users.first : null;
+      
+      setState(() {
+        _places = places;
+        _users = users;
+        _currentUser = currentUser;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des données: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -66,6 +94,30 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
       _isDarkMode = !_isDarkMode;
     });
   }
+  
+  void _navigateToPlaceDetails(Place place) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlaceDetailsPage(
+          placeId: place.id,
+          place: place,
+        ),
+      ),
+    );
+  }
+  
+  void _navigateToUserDetails(User user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserDetailsPage(
+          userId: user.id,
+          user: user,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,19 +126,80 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
       child: Scaffold(
         backgroundColor: _isDarkMode ? Colors.grey[900] : Colors.white,
         appBar: _buildAppBar(context),
-        body: _buildBody(context),
+        body: _isLoading 
+            ? _buildLoadingState() 
+            : _errorMessage.isNotEmpty 
+                ? _buildErrorState() 
+                : _buildBody(context),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            color: AppTheme.primaryColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Chargement des données...',
+            style: TextStyle(
+              color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: AppTheme.errorColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Erreur',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.getColor(context, AppTheme.textPrimary, AppTheme.darkTextPrimary),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Réessayer'),
+          ),
+        ],
       ),
     );
   }
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      title: Text(
+      title: const Text(
         "Tableau de bord",
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
       ),
       actions: [
         IconButton(
@@ -100,7 +213,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             return IconButton(
               icon: Transform.rotate(
                 angle: _animationController.value * 2.0 * 3.14159,
-                child: Icon(Icons.logout),
+                child: const Icon(Icons.logout),
               ),
               tooltip: "Déconnexion",
               onPressed: () {
@@ -142,35 +255,76 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   }
 
   Widget _buildBody(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Profile Stats Section
-          ProfileStats(
-            followersCount: '120',
-            followingCount: '98',
-          ),
-          
-          // Carousel of Profiles
-          ProfileCarousel(profiles: profiles),
-          
-          // Category Selection
-          CategorySelection(
-            categories: ["Restaurant", "Café", "Bar"],
-            selectedCategory: selectedCategory,
-            onCategorySelected: (category) {
-              setState(() {
-                selectedCategory = category;
-              });
-            },
-          ),
-          
-          // Category Grid
-          CategoryGrid(
-            categories: categories,
-            selectedCategory: selectedCategory,
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          children: [
+            // Profile Stats Section
+            ProfileStats(
+              currentUser: _currentUser,
+              followersCount: _currentUser?.followersCount.toString() ?? '0',
+              followingCount: _currentUser?.followingCount.toString() ?? '0',
+            ),
+            
+            // Carousel of Profiles
+            ProfileCarousel(
+              users: _users,
+              onUserSelected: _navigateToUserDetails,
+            ),
+            
+            // Tab Bar
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Places'),
+                Tab(text: 'Users'),
+              ],
+              labelColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
+              unselectedLabelColor: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              indicatorColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
+            ),
+            
+            // Tab Content
+            SizedBox(
+              height: 600, // Fixed height for tab content
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Places Tab
+                  Column(
+                    children: [
+                      // Category Selection
+                      CategorySelection(
+                        categories: ["Restaurant", "Café", "Bar"],
+                        selectedCategory: _selectedCategory,
+                        onCategorySelected: (category) {
+                          setState(() {
+                            _selectedCategory = category;
+                          });
+                        },
+                      ),
+                      
+                      // Category Grid
+                      CategoryGrid(
+                        places: _places,
+                        selectedCategory: _selectedCategory,
+                        onPlaceSelected: _navigateToPlaceDetails,
+                      ),
+                    ],
+                  ),
+                  
+                  // Users Tab
+                  UserGrid(
+                    users: _users,
+                    onUserSelected: _navigateToUserDetails,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

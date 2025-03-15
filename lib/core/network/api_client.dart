@@ -2,6 +2,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApiClient {
+  // For emulator, use 10.0.2.2 to access localhost
+  // For physical device, use your computer's IP address
+  // For web, use localhost
   final String baseUrl = "http://10.0.2.2:5001"; // Backend base URL
   final String loginEndpoint = "/api/users/login"; // Login endpoint
   final String signupEndpoint = "/api/users/signup"; // Signup endpoint
@@ -78,12 +81,38 @@ class ApiClient {
 
   // Get all users
   Future<List<dynamic>> getAllUsers() async {
-    return await get(usersEndpoint);
+    final url = Uri.parse("$baseUrl$usersEndpoint");
+    
+    print("🔹 Sending GET request to: $url");
+    
+    final response = await http.get(url, headers: {"Content-Type": "application/json"});
+    
+    print("📥 Response Status Code: ${response.statusCode}");
+    print("📥 Response Body: ${response.body}");
+    
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception("❌ Request failed: ${response.body}");
+    }
   }
 
   // Get all places
   Future<List<dynamic>> getAllPlaces() async {
-    return await get(placesEndpoint);
+    final url = Uri.parse("$baseUrl$placesEndpoint");
+    
+    print("🔹 Sending GET request to: $url");
+    
+    final response = await http.get(url, headers: {"Content-Type": "application/json"});
+    
+    print("📥 Response Status Code: ${response.statusCode}");
+    print("📥 Response Body: ${response.body}");
+    
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception("❌ Request failed: ${response.body}");
+    }
   }
 
   // Get followers count
@@ -96,5 +125,40 @@ class ApiClient {
   Future<int> getFollowingCount(String userId) async {
     final response = await get("$followingCountEndpoint$userId");
     return response["followingCount"];
+  }
+
+  Future<Map<String, dynamic>> getPlaceById(String placeId) async {
+  final url = Uri.parse("$baseUrl/api/places/$placeId"); // Make sure the endpoint is correct
+
+  print("🔹 Sending GET request to: $url");
+
+  final response = await http.get(url, headers: {"Content-Type": "application/json"});
+
+  print("📥 Response Status Code: ${response.statusCode}");
+  print("📥 Response Body: ${response.body}");
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception("❌ Request failed: ${response.body}");
+  }
+}
+
+  // Get user by ID
+  Future<Map<String, dynamic>> getUserById(String userId) async {
+    final url = Uri.parse("$baseUrl/api/users/$userId");
+    
+    print("🔹 Sending GET request to: $url");
+    
+    final response = await http.get(url, headers: {"Content-Type": "application/json"});
+    
+    print("📥 Response Status Code: ${response.statusCode}");
+    print("📥 Response Body: ${response.body}");
+    
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception("❌ Request failed: ${response.body}");
+    }
   }
 }
