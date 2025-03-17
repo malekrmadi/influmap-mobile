@@ -3,6 +3,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/place_model.dart';
 import '../../domain/repositories/place_repository.dart';
 import 'package:auth/setup_locator.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
 
 class PlaceDetailsPage extends StatefulWidget {
   final String placeId;
@@ -296,40 +299,47 @@ class _PlaceDetailsPageState extends State<PlaceDetailsPage> {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.grey[800] : Colors.grey[200],
-                        borderRadius: BorderRadius.circular(16),
+                  height: 300,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
                       ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.map,
-                              size: 48,
-                              color: isDark ? Colors.grey[600] : Colors.grey[400],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Carte non disponible',
-                              style: TextStyle(
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Latitude: ${place.location.latitude.toStringAsFixed(6)}\nLongitude: ${place.location.longitude.toStringAsFixed(6)}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: FlutterMap(
+                      options: MapOptions(
+                        center: LatLng(place.location.latitude, place.location.longitude),
+                        zoom: 15.0,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                          subdomains: ['a', 'b', 'c'],
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              width: 40.0,
+                              height: 40.0,
+                              point: LatLng(place.location.latitude, place.location.longitude),
+                              builder: (ctx) => Icon(
+                                Icons.location_pin,
+                                color: Colors.red,
+                                size: 40.0,
                               ),
                             ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
+                  ),
+                ),
                   ],
                 ),
               ),
