@@ -12,7 +12,7 @@ class ApiClient {
   final String placesEndpoint = "/api/places"; // Get all places
   final String followersCountEndpoint = "/api/friendships/followers/count/"; // Get followers count
   final String followingCountEndpoint = "/api/friendships/following/count/"; // Get following count
-
+  final String postsEndpoint = "/api/posts";
   // General method for making POST requests
   Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
     final url = Uri.parse("$baseUrl$endpoint"); // Full URL for the request
@@ -161,4 +161,24 @@ class ApiClient {
       throw Exception("❌ Request failed: ${response.body}");
     }
   }
+
+
+    // 📌 Nouvelle fonction pour récupérer toutes les publications
+  Future<List<dynamic>> getAllPosts() async {
+    final url = Uri.parse("$baseUrl$postsEndpoint/all"); // Assure-toi que cette route existe dans ton backend
+
+    print("🔹 Sending GET request to: $url");
+
+    final response = await http.get(url, headers: {"Content-Type": "application/json"});
+
+    print("📥 Response Status Code: ${response.statusCode}");
+    print("📥 Response Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception("❌ Request failed: ${response.body}");
+    }
+  }
+
 }
