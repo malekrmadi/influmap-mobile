@@ -11,6 +11,9 @@ import 'package:auth/modules/auth/data/repositories/place_repository_impl.dart';
 import 'package:auth/modules/auth/data/repositories/user_repository_impl.dart';
 import 'package:auth/modules/auth/data/datasources/place_remote_data_source.dart';
 import 'package:auth/modules/auth/data/datasources/user_remote_data_source.dart';
+import 'package:auth/modules/auth/data/datasources/post_remote_data_source.dart';
+import 'package:auth/modules/auth/data/repositories/post_repository_impl.dart';
+import 'package:auth/modules/auth/domain/repositories/post_repository.dart';
 
 final sl = GetIt.instance;
 
@@ -19,16 +22,36 @@ void setupLocator() {
   sl.registerLazySingleton<ApiClient>(() => ApiClient());
 
   // Register DataSources
-  sl.registerLazySingleton<AuthRemoteDataSource>(() => AuthRemoteDataSource(sl()));
-  sl.registerLazySingleton<PlaceRemoteDataSource>(() => PlaceRemoteDataSource(sl()));
-  sl.registerLazySingleton<UserRemoteDataSource>(() => UserRemoteDataSource(sl()));
+  sl.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSource(sl()),
+  );
+  sl.registerLazySingleton<PlaceRemoteDataSource>(
+    () => PlaceRemoteDataSource(sl()),
+  );
+  sl.registerLazySingleton<UserRemoteDataSource>(
+    () => UserRemoteDataSource(sl()),
+  );
+  sl.registerLazySingleton<PostRemoteDataSource>(
+    () => PostRemoteDataSource(sl()),
+  );
 
   // Register Repositories
-  sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(remoteDataSource: sl()));
-  sl.registerLazySingleton<PlaceRepository>(() => PlaceRepositoryImpl(remoteDataSource: sl()));
-  sl.registerLazySingleton<UserRepository>(() => UserRepositoryImpl(remoteDataSource: sl()));
+  sl.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<PlaceRepository>(
+    () => PlaceRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<UserRepository>(
+    () => UserRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<PostRepository>(
+    () => PostRepositoryImpl(remoteDataSource: sl()),
+  );
 
   // Register Blocs
-  sl.registerFactory<AuthBloc>(() => AuthBloc(sl())); // Pass sl() as the positional argument
+  sl.registerFactory<AuthBloc>(
+    () => AuthBloc(sl()),
+  );
 }
 

@@ -121,17 +121,12 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: AppTheme.getThemeData(_isDarkMode),
-      child: Scaffold(
-        backgroundColor: _isDarkMode ? Colors.grey[900] : Colors.white,
-        appBar: _buildAppBar(context),
-        body: _isLoading 
-            ? _buildLoadingState() 
-            : _errorMessage.isNotEmpty 
-                ? _buildErrorState() 
-                : _buildBody(context),
-      ),
+    return Scaffold(
+      body: _isLoading 
+          ? _buildLoadingState() 
+          : _errorMessage.isNotEmpty 
+              ? _buildErrorState() 
+              : _buildBody(context),
     );
   }
 
@@ -196,64 +191,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        "Tableau de bord",
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
-          tooltip: _isDarkMode ? "Mode clair" : "Mode sombre",
-          onPressed: _toggleTheme,
-        ),
-        AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return IconButton(
-              icon: Transform.rotate(
-                angle: _animationController.value * 2.0 * 3.14159,
-                child: const Icon(Icons.logout),
-              ),
-              tooltip: "Déconnexion",
-              onPressed: () {
-                _animationController.forward(from: 0.0).then((_) {
-                  context.read<AuthBloc>().add(LogoutRequested());
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) =>
-                          BlocProvider.value(
-                        value: context.read<AuthBloc>(),
-                        child: LoginForm(),
-                      ),
-                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                        const begin = Offset(1.0, 0.0);
-                        const end = Offset.zero;
-                        const curve = Curves.easeInOutCubic;
-                        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                        return SlideTransition(
-                          position: animation.drive(tween),
-                          child: child,
-                        );
-                      },
-                    ),
-                  );
-                });
-              },
-            );
-          },
-        ),
-      ],
-      elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(16),
-        ),
-      ),
-    );
-  }
-
   Widget _buildBody(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -261,6 +198,21 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
+            // Tab Bar
+            Container(
+              margin: const EdgeInsets.only(top: 16),
+              child: TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Places'),
+                  Tab(text: 'Users'),
+                ],
+                labelColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
+                unselectedLabelColor: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+                indicatorColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
+              ),
+            ),
+            
             // Profile Stats Section
             ProfileStats(
               currentUser: _currentUser,
@@ -272,18 +224,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
             ProfileCarousel(
               users: _users,
               onUserSelected: _navigateToUserDetails,
-            ),
-            
-            // Tab Bar
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Places'),
-                Tab(text: 'Users'),
-              ],
-              labelColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
-              unselectedLabelColor: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
-              indicatorColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
             ),
             
             // Tab Content

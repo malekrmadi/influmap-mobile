@@ -4,6 +4,7 @@ import 'package:auth/modules/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'signup_page.dart';
+import 'main_page.dart';
 import 'dashboard_page.dart';
 
 class LoginForm extends StatefulWidget {
@@ -36,7 +37,7 @@ class _LoginFormState extends State<LoginForm> {
           if (state is AuthSuccess) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => DashboardPage()),
+              MaterialPageRoute(builder: (context) => MainPage()),
             );
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
