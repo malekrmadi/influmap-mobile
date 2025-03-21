@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 //import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:auth/modules/auth/presentation/bloc/auth_bloc.dart';
-import 'package:auth/modules/auth/presentation/bloc/auth_event.dart';
+//import 'package:flutter_bloc/flutter_bloc.dart';
+//import 'package:auth/modules/auth/presentation/bloc/auth_bloc.dart';
+//import 'package:auth/modules/auth/presentation/bloc/auth_event.dart';
 //import 'package:flutter/services.dart';
 import 'package:auth/setup_locator.dart';
-import 'login_page.dart';
+//import 'login_page.dart';
 import 'place_details_page.dart';
 import 'user_details_page.dart';
 
