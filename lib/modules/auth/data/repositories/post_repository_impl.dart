@@ -10,39 +10,32 @@ class PostRepositoryImpl implements PostRepository {
   @override
   Future<List<Post>> getAllPosts() async {
     try {
-      return await remoteDataSource.getAllPosts();
+      final posts = await remoteDataSource.getAllPosts();
+      return posts.map((post) => _handleNullValues(post)).toList();
     } catch (e) {
-      // For development purposes, return mock data if API is unavailable
-      return _getMockPosts();
+      throw Exception('Erreur lors de la récupération des posts: $e');
     }
   }
 
   @override
   Future<Post> getPostById(String id) async {
     try {
-      return await remoteDataSource.getPostById(id);
+      final post = await remoteDataSource.getPostById(id);
+      return _handleNullValues(post);
     } catch (e) {
-      // For development purposes, return mock data if API is unavailable
-      return _getMockPost(id);
+      throw Exception('Erreur lors de la récupération du post: $e');
     }
   }
 
-  List<Post> _getMockPosts() {
-    return [
-      _getMockPost('1'),
-      _getMockPost('2'),
-      _getMockPost('3'),
-    ];
-  }
-
-  Post _getMockPost(String id) {
+  // Fonction pour éviter les valeurs nulles
+  Post _handleNullValues(Post post) {
     return Post(
-      userId: 'user_$id',
-      placeId: 'place_$id',
-      type: 'Story',
-      media: ['assets/images/post.png'],
-      text: 'Superbe coucher de soleil ici !',
-      expiresAt: DateTime.now().add(const Duration(days: 1)),
+      userId: post.userId.isNotEmpty ? post.userId : 'default_user',
+      placeId: post.placeId.isNotEmpty ? post.placeId : 'default_place',
+      type: post.type,
+      media: post.media,
+      text: post.text,
+      expiresAt: post.expiresAt,
     );
   }
-} 
+}

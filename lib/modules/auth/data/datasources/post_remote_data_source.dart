@@ -6,23 +6,43 @@ class PostRemoteDataSource {
 
   PostRemoteDataSource(this._apiClient);
 
+  /// 📌 Récupérer tous les posts
   Future<List<Post>> getAllPosts() async {
     try {
-      final response = await _apiClient.get('/posts');
-      return (response.data as List)
-          .map((json) => Post.fromJson(json as Map<String, dynamic>))
-          .toList();
+      final response = await _apiClient.getAllPosts();
+      if (response is List) {
+        return response.map((json) => _handleNullValues(Post.fromJson(json as Map<String, dynamic>))).toList();
+      } else {
+        throw Exception("❌ Unexpected response format for posts");
+      }
     } catch (e) {
-      throw Exception('Failed to fetch posts: $e');
+      throw Exception('❌ Failed to fetch posts: $e');
     }
   }
 
+  /// 📌 Récupérer un post par ID
   Future<Post> getPostById(String id) async {
     try {
       final response = await _apiClient.get('/posts/$id');
-      return Post.fromJson(response.data as Map<String, dynamic>);
+      if (response is Map<String, dynamic>) {
+        return _handleNullValues(Post.fromJson(response));
+      } else {
+        throw Exception("❌ Unexpected response format for a single post");
+      }
     } catch (e) {
-      throw Exception('Failed to fetch post: $e');
+      throw Exception('❌ Failed to fetch post: $e');
     }
   }
-} 
+
+  /// 📌 Fonction pour éviter les valeurs nulles
+  Post _handleNullValues(Post post) {
+    return Post(
+      userId: (post.userId.isNotEmpty) ? post.userId : 'default_user',
+      placeId: (post.placeId.isNotEmpty) ? post.placeId : 'default_place',
+      type: post.type,
+      media: post.media,
+      text: post.text,
+      expiresAt: post.expiresAt,
+    );
+  }
+}
