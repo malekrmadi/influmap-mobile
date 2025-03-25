@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:auth/core/theme/app_theme.dart';
 import 'package:auth/setup_locator.dart';
-import 'package:shimmer/shimmer.dart'; // Ajout d'un effet de chargement animé
+import 'package:shimmer/shimmer.dart';
 import '../../domain/models/post_model.dart';
+import '../../domain/models/user_model.dart';
+import '../../domain/models/place_model.dart';
 import '../../domain/repositories/post_repository.dart';
+import '../../domain/repositories/user_repository.dart';
+import '../../domain/repositories/place_repository.dart';
+import '../widgets/post_card.dart';
 
 class FeedPage extends StatefulWidget {
   const FeedPage({Key? key}) : super(key: key);
@@ -14,7 +19,13 @@ class FeedPage extends StatefulWidget {
 
 class _FeedPageState extends State<FeedPage> {
   late final PostRepository _postRepository;
+  late final UserRepository _userRepository;
+  late final PlaceRepository _placeRepository;
+  
   List<Post> _posts = [];
+  Map<String, User> _usersCache = {};
+  Map<String, Place> _placesCache = {};
+  
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -22,10 +33,12 @@ class _FeedPageState extends State<FeedPage> {
   void initState() {
     super.initState();
     _postRepository = sl<PostRepository>();
-    _loadPosts();
+    _userRepository = sl<UserRepository>();
+    _placeRepository = sl<PlaceRepository>();
+    _loadData();
   }
 
-  Future<void> _loadPosts() async {
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -33,6 +46,28 @@ class _FeedPageState extends State<FeedPage> {
 
     try {
       final posts = await _postRepository.getAllPosts();
+      
+      // Préchargement des données utilisateurs et lieux pour les posts
+      for (final post in posts) {
+        if (!_usersCache.containsKey(post.userId)) {
+          try {
+            final user = await _userRepository.getUserById(post.userId);
+            _usersCache[post.userId] = user;
+          } catch (e) {
+            print('Erreur chargement utilisateur ${post.userId}: $e');
+          }
+        }
+        
+        if (!_placesCache.containsKey(post.placeId)) {
+          try {
+            final place = await _placeRepository.getPlaceById(post.placeId);
+            _placesCache[post.placeId] = place;
+          } catch (e) {
+            print('Erreur chargement lieu ${post.placeId}: $e');
+          }
+        }
+      }
+      
       setState(() {
         _posts = posts;
         _isLoading = false;
@@ -57,20 +92,82 @@ class _FeedPageState extends State<FeedPage> {
     );
   }
 
-  /// Effet Shimmer lors du chargement
   Widget _buildLoadingState() {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: 5,
+      itemCount: 3,
       itemBuilder: (context, index) => Shimmer.fromColors(
         baseColor: Colors.grey.shade300,
         highlightColor: Colors.grey.shade100,
         child: Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Container(
-            height: 120,
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.only(bottom: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            children: [
+              // Header shimmer
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    // Avatar shimmer
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Text shimmer
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 14,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 5),
+                          Container(
+                            width: 80,
+                            height: 12,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Image shimmer
+              Container(
+                width: double.infinity,
+                height: 200,
+                color: Colors.white,
+              ),
+              // Content shimmer
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.6,
+                      height: 12,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -88,25 +185,28 @@ class _FeedPageState extends State<FeedPage> {
             color: AppTheme.errorColor,
           ),
           const SizedBox(height: 16),
-          Text(
-            _errorMessage,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadPosts,
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Réessayer'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Réessayer', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -114,135 +214,36 @@ class _FeedPageState extends State<FeedPage> {
   }
 
   Widget _buildFeedList() {
-  return RefreshIndicator(
-    onRefresh: _loadPosts,
-    child: ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _posts.length,
-      itemBuilder: (context, index) {
-        final post = _posts[index];
-        String? imageUrl = post.media.isNotEmpty ? post.media.first : null; // Get first image if available
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          color: Colors.white,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Post type and location info
-              ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: Icon(
-                  post.type == 'Story' ? Icons.auto_stories : Icons.post_add,
-                  color: AppTheme.primaryColor,
-                  size: 28,
-                ),
-                title: Text(
-                  'Lieu ID: ${post.placeId}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                subtitle: Text(
-                  'Type: ${post.type}',
-                  style: TextStyle(
-                    color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
-                  ),
-                ),
-              ),
-
-              // Image with error handling
-              if (imageUrl != null && imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: 200,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 200,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 200,
-                        color: Colors.grey.shade300,
-                        child: const Center(child: Icon(Icons.image_not_supported, size: 50)),
-                      );
-                    },
-                  ),
-                )
-              else
-                // Default placeholder if no media is available
-                Container(
-                  height: 200,
-                  color: Colors.grey.shade300,
-                  child: const Center(
-                    child: Icon(Icons.image, size: 50, color: Colors.white),
-                  ),
-                ),
-
-              // Post text
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  post.text,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.getColor(context, AppTheme.textPrimary, AppTheme.darkTextPrimary),
-                  ),
-                ),
-              ),
-
-              // Additional details
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Expire le: ${_formatDate(post.expiresAt)}',
-                      style: TextStyle(
-                        color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
-                        fontSize: 12,
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Action bouton
-                      },
-                      icon: const Icon(Icons.share, size: 18),
-                      label: const Text('Partager'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-
-
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: AppTheme.primaryColor,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        itemCount: _posts.length,
+        itemBuilder: (context, index) {
+          final post = _posts[index];
+          final user = _usersCache[post.userId];
+          final place = _placesCache[post.placeId];
+          
+          return PostCard(
+            post: post,
+            postUser: user,
+            postPlace: place,
+            onLike: () {
+              // Implémenter la fonctionnalité like
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Aimé le post de ${user?.username ?? "utilisateur"}!')),
+              );
+            },
+            onComment: () {
+              // Implémenter la fonctionnalité commenter
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Commenter le post sur ${place?.name ?? "lieu"}')),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 }

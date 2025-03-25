@@ -198,6 +198,20 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
+            
+            
+            // Profile Stats Section
+            ProfileStats(
+              currentUser: _currentUser,
+              followersCount: _currentUser?.followersCount.toString() ?? '0',
+              followingCount: _currentUser?.followingCount.toString() ?? '0',
+            ),
+            
+            // Carousel of Profiles
+            ProfileCarousel(
+              users: _users,
+              onUserSelected: _navigateToUserDetails,
+            ),
             // Tab Bar
             Container(
               margin: const EdgeInsets.only(top: 16),
@@ -211,19 +225,6 @@ class _DashboardPageState extends State<DashboardPage> with TickerProviderStateM
                 unselectedLabelColor: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
                 indicatorColor: AppTheme.getColor(context, AppTheme.primaryColor, AppTheme.darkPrimaryColor),
               ),
-            ),
-            
-            // Profile Stats Section
-            ProfileStats(
-              currentUser: _currentUser,
-              followersCount: _currentUser?.followersCount.toString() ?? '0',
-              followingCount: _currentUser?.followingCount.toString() ?? '0',
-            ),
-            
-            // Carousel of Profiles
-            ProfileCarousel(
-              users: _users,
-              onUserSelected: _navigateToUserDetails,
             ),
             
             // Tab Content
