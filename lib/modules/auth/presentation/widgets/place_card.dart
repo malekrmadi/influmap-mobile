@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:auth/core/theme/app_theme.dart';
 import '../../domain/models/place_model.dart';
 
 /// A widget that displays a place card with image, rating, and details
@@ -16,105 +17,118 @@ class PlaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: isHovered ? 8 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image section - using a placeholder based on category
-          AspectRatio(
-            aspectRatio: 1.5,
-            child: _buildPlaceholderImage(place.category),
-          ),
-          
-          // Content section
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    place.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  
-                  // Location
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          '${place.location.latitude}, ${place.location.longitude}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+    return InkWell(
+      onTap: onViewDetails,
+      borderRadius: BorderRadius.circular(16),
+      child: Card(
+        elevation: isHovered ? 8 : 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image section - taille fixe
+            SizedBox(
+              height: 120,
+              width: double.infinity,
+              child: _buildPlaceholderImage(place.category),
+            ),
+            
+            // Content section
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title with category badge
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            place.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Rating
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 14, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${place.rating}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getCategoryColor(place.category).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            place.category,
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: _getCategoryColor(place.category),
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${place.reviewsCount} reviews)',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  // Spacer to push button to bottom
-                  const Spacer(),
-                  
-                  // View Details button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: onViewDetails,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('View Details'),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    
+                    // Location
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            '${place.location.latitude.toStringAsFixed(2)}, ${place.location.longitude.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Rating
+                    Row(
+                      children: [
+                        const Icon(Icons.star, size: 12, color: Colors.amber),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${place.rating}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            '(${place.reviewsCount} reviews)',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -147,10 +161,23 @@ class PlaceCard extends StatelessWidget {
       child: Center(
         child: Icon(
           iconData,
-          size: 50,
+          size: 40,
           color: Colors.white,
         ),
       ),
     );
+  }
+  
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'Restaurant':
+        return Colors.orange;
+      case 'Café':
+        return Colors.brown;
+      case 'Bar':
+        return Colors.purple;
+      default:
+        return Colors.blue;
+    }
   }
 } 

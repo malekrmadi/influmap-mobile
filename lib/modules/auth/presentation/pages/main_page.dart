@@ -6,6 +6,9 @@ import 'package:auth/modules/auth/presentation/bloc/auth_event.dart';
 import 'dashboard_page.dart';
 import 'feed_page.dart';
 import 'map_page.dart';
+import 'my_profile_page.dart';
+import 'notifications_page.dart';
+import 'explore_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({Key? key}) : super(key: key);
@@ -14,38 +17,26 @@ class MainPage extends StatefulWidget {
   _MainPageState createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin {
+class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
   bool _isDarkMode = false;
-  late TabController _tabController;
 
   final List<Widget> _pages = [
-    const DashboardPage(),
     const FeedPage(),
+    const ExplorePage(),
     const MapPage(),
+    const NotificationsPage(),
+    const MyProfilePage(),
   ];
 
-  final List<String> _titles = ['Dashboard', 'Feed', 'Map'];
-  final List<IconData> _icons = [Icons.dashboard, Icons.feed, Icons.map];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          _selectedIndex = _tabController.index;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  final List<String> _titles = ['Feed', 'Explore', 'Map', 'Notifications', 'My Profile'];
+  final List<IconData> _icons = [
+    Icons.home_rounded,
+    Icons.explore_rounded,
+    Icons.map_rounded,
+    Icons.notifications_rounded,
+    Icons.person_rounded,
+  ];
 
   void _toggleTheme() {
     setState(() {
@@ -63,32 +54,54 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       data: AppTheme.getThemeData(_isDarkMode),
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_titles[_selectedIndex]),
+          title: Text(_titles[_selectedIndex],
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          elevation: 0,
           actions: [
             IconButton(
-              icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode),
+              icon: Icon(_isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
               onPressed: _toggleTheme,
             ),
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout_rounded),
               onPressed: _logout,
             ),
           ],
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: List.generate(3, (index) {
-              return Tab(
+        ),
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            items: List.generate(_icons.length, (index) {
+              return BottomNavigationBarItem(
                 icon: Icon(_icons[index]),
-                text: _titles[index],
+                label: _titles[index],
               );
             }),
-            labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: Colors.grey,
+            selectedItemColor: AppTheme.primaryColor,
+            unselectedItemColor: Colors.grey,
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppTheme.getColor(context, Colors.white, Colors.grey.shade900),
+            elevation: 8,
           ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: _pages,
         ),
       ),
     );
