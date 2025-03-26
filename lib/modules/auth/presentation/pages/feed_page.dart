@@ -235,12 +235,6 @@ class _FeedPageState extends State<FeedPage> {
                 SnackBar(content: Text('Aimé le post de ${user?.username ?? "utilisateur"}!')),
               );
             },
-            onComment: () {
-              // Implémenter la fonctionnalité commenter
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Commenter le post sur ${place?.name ?? "lieu"}')),
-              );
-            },
           );
         },
       ),
