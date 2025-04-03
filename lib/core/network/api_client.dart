@@ -180,5 +180,11 @@ class ApiClient {
       throw Exception("❌ Request failed: ${response.body}");
     }
   }
+  
+  Future<Map<String, dynamic>> createPlace(Map<String, dynamic> placeData) async {
+    return await post(placesEndpoint, placeData);
+  }
+
+
 
 }

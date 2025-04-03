@@ -1,22 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:auth/core/theme/app_theme.dart';
+import 'package:auth/setup_locator.dart';
+import '../../domain/models/place_model.dart';
+import '../../domain/repositories/place_repository.dart';
+import '../widgets/add_place_form.dart';
+import '../widgets/place_marker.dart';
+import '../pages/place_details_page.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({Key? key}) : super(key: key);
 
   @override
-  _MapPageState createState() => _MapPageState();
+  State<MapPage> createState() => _MapPageState();
 }
 
 class _MapPageState extends State<MapPage> {
+  late final PlaceRepository _placeRepository;
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
+  List<Place> _places = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+  
+  // Position initiale de la carte (Paris)
   final LatLng _parisCenter = LatLng(48.8566, 2.3522);
+  
+  // État du formulaire d'ajout de lieu
+  bool _showAddPlaceForm = false;
+  LatLng? _selectedLocation;
 
   @override
   void initState() {
     super.initState();
+    _placeRepository = sl<PlaceRepository>();
+    _loadPlaces();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _mapController.move(_parisCenter, 13.0);
     });
@@ -27,6 +46,58 @@ class _MapPageState extends State<MapPage> {
     _mapController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPlaces() async {
+    try {
+      final places = await _placeRepository.getAllPlaces();
+      setState(() {
+        _places = places;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erreur lors du chargement des lieux: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _addPlace(Place place) async {
+    try {
+      await _placeRepository.createPlace(place);
+      await _loadPlaces(); // Recharger la liste des lieux
+      setState(() {
+        _showAddPlaceForm = false;
+        _selectedLocation = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lieu ajouté avec succès')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de l\'ajout du lieu: $e')),
+      );
+    }
+  }
+
+  void _handleMapTap(TapPosition tapPosition, LatLng point) {
+    setState(() {
+      _selectedLocation = point;
+      _showAddPlaceForm = true;
+    });
+  }
+
+  void _navigateToPlaceDetails(Place place) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlaceDetailsPage(
+          placeId: place.id,
+          place: place,
+        ),
+      ),
+    );
   }
 
   void _zoomIn() {
@@ -54,12 +125,50 @@ class _MapPageState extends State<MapPage> {
             options: MapOptions(
               center: _parisCenter,
               zoom: 13.0,
+              onTap: _handleMapTap,
             ),
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.auth.app',
               ),
+              // Marqueurs des lieux
+              MarkerLayer(
+                markers: _places.map((place) => Marker(
+                  point: LatLng(
+                    place.location.latitude,
+                    place.location.longitude,
+                  ),
+                  width: 120,
+                  height: 120,
+                  builder: (context) => PlaceMarker(
+                    place: place,
+                    onTap: () => _navigateToPlaceDetails(place),
+                  ),
+                )).toList(),
+              ),
+              // Marqueur de la position sélectionnée
+              if (_selectedLocation != null && _showAddPlaceForm)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _selectedLocation!,
+                      width: 40,
+                      height: 40,
+                      builder: (context) => Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_location_alt,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
 
@@ -97,7 +206,7 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
-
+          
           // Zoom Controls
           Positioned(
             right: 16,
@@ -116,6 +225,28 @@ class _MapPageState extends State<MapPage> {
               ],
             ),
           ),
+          
+          // Formulaire d'ajout de lieu
+          if (_showAddPlaceForm && _selectedLocation != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: AddPlaceForm(
+                    latitude: _selectedLocation!.latitude,
+                    longitude: _selectedLocation!.longitude,
+                    onSubmit: _addPlace,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

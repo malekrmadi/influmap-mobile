@@ -28,6 +28,15 @@ class PlaceRepositoryImpl implements PlaceRepository {
     }
   }
   
+  @override
+  Future<Place> createPlace(Place place) async {
+    // Simulation d'un appel API
+    await Future.delayed(const Duration(seconds: 1));
+    // Dans une vraie implémentation, on enverrait les données à l'API
+    // et on retournerait la réponse
+    return place;
+  }
+  
   // Mock data for development
   List<Place> _getMockPlaces() {
     return [
