@@ -22,15 +22,15 @@ class _AddPlaceFormState extends State<AddPlaceForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _categoryController = TextEditingController();
   final _tagController = TextEditingController();
+  String _selectedCategory = 'Restaurant'; // Valeur par défaut
+  final List<String> _categories = ['Restaurant', 'Café', 'Bar', 'Événement', 'Autre'];
   List<String> _tags = [];
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _categoryController.dispose();
     _tagController.dispose();
     super.dispose();
   }
@@ -57,7 +57,7 @@ class _AddPlaceFormState extends State<AddPlaceForm> {
         id: now.millisecondsSinceEpoch.toString(), // ID temporaire
         name: _nameController.text,
         description: _descriptionController.text,
-        category: _categoryController.text,
+        category: _selectedCategory,
         location: Location(
           latitude: widget.latitude,
           longitude: widget.longitude,
@@ -132,18 +132,29 @@ class _AddPlaceFormState extends State<AddPlaceForm> {
           ),
           const SizedBox(height: 16),
           
-          // Catégorie
-          TextFormField(
-            controller: _categoryController,
+          // Catégorie (Liste déroulante)
+          DropdownButtonFormField<String>(
+            value: _selectedCategory,
             decoration: InputDecoration(
               labelText: 'Catégorie',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
+            items: _categories.map((category) => DropdownMenuItem(
+              value: category,
+              child: Text(category),
+            )).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedCategory = value;
+                });
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Veuillez entrer une catégorie';
+                return 'Veuillez sélectionner une catégorie';
               }
               return null;
             },

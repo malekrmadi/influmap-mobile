@@ -65,18 +65,35 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _addPlace(Place place) async {
     try {
-      await _placeRepository.createPlace(place);
+      print('🚀 Début de l\'ajout d\'un lieu: ${place.name}');
+      print('📍 Coordonnées: ${place.location.latitude}, ${place.location.longitude}');
+      print('🔖 Catégorie: ${place.category}');
+      print('🏷️ Tags: ${place.tags.join(', ')}');
+      
+      final createdPlace = await _placeRepository.createPlace(place);
+      print('✅ Lieu créé avec succès (id: ${createdPlace.id})');
+      
       await _loadPlaces(); // Recharger la liste des lieux
       setState(() {
         _showAddPlaceForm = false;
         _selectedLocation = null;
       });
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lieu ajouté avec succès')),
+        SnackBar(
+          content: Text('Lieu "${place.name}" ajouté avec succès'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
       );
     } catch (e) {
+      print('❌ Erreur lors de l\'ajout du lieu: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'ajout du lieu: $e')),
+        SnackBar(
+          content: Text('Erreur lors de l\'ajout du lieu: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }

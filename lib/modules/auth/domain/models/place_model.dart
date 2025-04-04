@@ -11,8 +11,8 @@ class Location {
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
-      latitude: json['latitude'] as double,
-      longitude: json['longitude'] as double,
+      latitude: _parseDouble(json['latitude']),
+      longitude: _parseDouble(json['longitude']),
     );
   }
 
@@ -51,16 +51,16 @@ class Place {
 
   factory Place.fromJson(Map<String, dynamic> json) {
     return Place(
-      id: json['_id'] as String,
+      id: json['_id'] != null ? json['_id'].toString() : json['id'].toString(),
       name: json['name'] as String,
       description: json['description'] as String,
       category: json['category'] as String,
-      rating: json['rating'] as double,
-      reviewsCount: json['reviewsCount'] as int,
-      tags: List<String>.from(json['tags']),
+      rating: _parseDouble(json['rating']),
+      reviewsCount: _parseInt(json['reviewsCount']),
+      tags: List<String>.from(json['tags'] ?? []),
       location: Location.fromJson(json['location']),
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : DateTime.now(),
     );
   }
 
@@ -78,4 +78,33 @@ class Place {
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
+}
+
+// Fonctions utilitaires pour parser les types numériques
+double _parseDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    try {
+      return double.parse(value);
+    } catch (e) {
+      return 0.0;
+    }
+  }
+  return 0.0;
+}
+
+int _parseInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) {
+    try {
+      return int.parse(value);
+    } catch (e) {
+      return 0;
+    }
+  }
+  return 0;
 } 

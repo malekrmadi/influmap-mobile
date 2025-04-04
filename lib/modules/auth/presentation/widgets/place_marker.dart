@@ -20,15 +20,12 @@ class PlaceMarker extends StatelessWidget {
         return Colors.brown;
       case 'bar':
         return Colors.purple;
-      case 'parc':
-        return Colors.green;
-      case 'musée':
-      case 'musee':
-        return Colors.indigo;
-      case 'magasin':
-        return Colors.blue;
-      default:
+      case 'événement':
         return Colors.red;
+      case 'autre':
+        return Colors.teal;
+      default:
+        return Colors.blueGrey;
     }
   }
 
@@ -40,13 +37,10 @@ class PlaceMarker extends StatelessWidget {
         return Icons.coffee;
       case 'bar':
         return Icons.local_bar;
-      case 'parc':
-        return Icons.park;
-      case 'musée':
-      case 'musee':
-        return Icons.museum;
-      case 'magasin':
-        return Icons.shopping_bag;
+      case 'événement':
+        return Icons.event;
+      case 'autre':
+        return Icons.location_on;
       default:
         return Icons.place;
     }
