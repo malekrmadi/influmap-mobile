@@ -5,11 +5,15 @@ import '../../domain/models/place_model.dart';
 class PlaceMarker extends StatelessWidget {
   final Place place;
   final VoidCallback onTap;
+  final bool showLabel;
+  final double scale;
 
   const PlaceMarker({
     Key? key,
     required this.place,
     required this.onTap,
+    this.showLabel = true,
+    this.scale = 1.0,
   }) : super(key: key);
 
   Color _getCategoryColor() {
@@ -66,57 +70,93 @@ class PlaceMarker extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Affichage du nom du lieu
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Text(
-              place.name,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+          // Affichage du nom du lieu (conditionnellement)
+          if (showLabel)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 8 * scale, 
+                vertical: 4 * scale
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12 * scale),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4 * scale,
+                    offset: Offset(0, 2 * scale),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Nom du lieu
+                  Text(
+                    place.name,
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 10 * scale,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Tags (si le zoom est suffisant)
+                  if (scale > 1.0 && place.tags.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 2 * scale),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 4 * scale,
+                        children: place.tags.take(2).map((tag) => Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4 * scale,
+                            vertical: 2 * scale,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4 * scale),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 8 * scale,
+                              color: color,
+                            ),
+                          ),
+                        )).toList(),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 4),
           // Marqueur avec icône
           Container(
-            width: 36,
-            height: 48,
+            width: 36 * scale,
+            height: 48 * scale,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(18),
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(18),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(18 * scale),
+                topRight: Radius.circular(18 * scale),
+                bottomLeft: Radius.circular(4 * scale),
+                bottomRight: Radius.circular(18 * scale),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.3),
-                  blurRadius: 5,
-                  offset: const Offset(0, 3),
+                  blurRadius: 5 * scale,
+                  offset: Offset(0, 3 * scale),
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.all(6 * scale),
             child: Icon(
               icon,
-              size: 18,
+              size: 18 * scale,
               color: Colors.white,
             ),
           ),
