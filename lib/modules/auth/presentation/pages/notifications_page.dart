@@ -9,7 +9,8 @@ class NotificationsPage extends StatefulWidget {
   _NotificationsPageState createState() => _NotificationsPageState();
 }
 
-class _NotificationsPageState extends State<NotificationsPage> {
+class _NotificationsPageState extends State<NotificationsPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final List<NotificationModel> _notifications = [
     NotificationModel(
       id: '1',
@@ -55,6 +56,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   void _markAsRead(String id) {
     setState(() {
       for (var i = 0; i < _notifications.length; i++) {
@@ -76,71 +89,192 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
+  List<NotificationModel> get _unreadNotifications => 
+      _notifications.where((n) => !n.isRead).toList();
+
+  List<NotificationModel> get _readNotifications => 
+      _notifications.where((n) => n.isRead).toList();
+
   @override
   Widget build(BuildContext context) {
-    int unreadCount = _notifications.where((n) => !n.isRead).length;
+    int unreadCount = _unreadNotifications.length;
 
     return Scaffold(
-      body: Column(
-        children: [
-          _buildHeader(unreadCount),
-          Expanded(
-            child: _notifications.isEmpty
-                ? _buildEmptyState()
-                : _buildNotificationsList(),
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(unreadCount),
+          SliverToBoxAdapter(
+            child: _buildTabBar(),
+          ),
+          SliverFillRemaining(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Toutes les notifications
+                _notifications.isEmpty
+                    ? _buildEmptyState()
+                    : _buildNotificationsList(_notifications),
+                
+                // Notifications non lues
+                _unreadNotifications.isEmpty
+                    ? _buildEmptyUnreadState()
+                    : _buildNotificationsList(_unreadNotifications),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(int unreadCount) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.getColor(
-          context,
-          Colors.grey.shade100,
-          Colors.grey.shade900,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Vous avez $unreadCount notification${unreadCount != 1 ? 's' : ''} non lue${unreadCount != 1 ? 's' : ''}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.getColor(context, AppTheme.textPrimary, AppTheme.darkTextPrimary),
-                ),
-              ),
-              Text(
-                'Restez informé des dernières activités',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
-                ),
-              ),
-            ],
+  Widget _buildAppBar(int unreadCount) {
+    return SliverAppBar(
+      expandedHeight: 140,
+      pinned: true,
+      backgroundColor: AppTheme.primaryColor,
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          'Notifications',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
-          if (unreadCount > 0)
-            TextButton.icon(
-              onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all, size: 16),
-              label: const Text('Tout marquer comme lu'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        background: Stack(
+          children: [
+            // Gradient background
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryColor.withOpacity(0.7),
+                    AppTheme.primaryColor,
+                  ],
+                ),
               ),
             ),
+            // Content
+            Positioned(
+              left: 20,
+              bottom: 60,
+              right: 20,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_active,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '$unreadCount notification${unreadCount != 1 ? 's' : ''}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 40),
+                        child: Text(
+                          'Restez informé des activités',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (unreadCount > 0)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        onPressed: _markAllAsRead,
+                        icon: const Icon(Icons.done_all, color: Colors.white),
+                        tooltip: 'Tout marquer comme lu',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: AppTheme.getColor(
+        context,
+        Colors.white,
+        Colors.grey.shade900,
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: AppTheme.primaryColor,
+        labelColor: AppTheme.primaryColor,
+        unselectedLabelColor: AppTheme.getColor(
+          context,
+          AppTheme.textSecondary,
+          AppTheme.darkTextSecondary,
+        ),
+        tabs: [
+          const Tab(
+            icon: Icon(Icons.notifications),
+            text: 'Toutes',
+          ),
+          Tab(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_active),
+                if (_unreadNotifications.isNotEmpty)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${_unreadNotifications.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            text: 'Non lues',
+          ),
         ],
       ),
     );
@@ -151,12 +285,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.notifications_none,
-            size: 80,
-            color: Colors.grey.shade400,
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.notifications_off_outlined,
+              size: 40,
+              color: AppTheme.primaryColor,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             'Aucune notification',
             style: TextStyle(
@@ -166,11 +308,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Vous serez notifié des nouvelles activités',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Vous serez notifié des nouvelles activités importantes',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              ),
             ),
           ),
         ],
@@ -178,16 +324,77 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  Widget _buildNotificationsList() {
-    return ListView.separated(
-      itemCount: _notifications.length,
-      padding: const EdgeInsets.all(16),
-      separatorBuilder: (context, index) => const Divider(height: 1),
+  Widget _buildEmptyUnreadState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.done_all,
+              size: 40,
+              color: Colors.green,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Tout est à jour',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.getColor(context, AppTheme.textPrimary, AppTheme.darkTextPrimary),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Vous avez lu toutes vos notifications',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationsList(List<NotificationModel> notifications) {
+    return ListView.builder(
+      itemCount: notifications.length,
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemBuilder: (context, index) {
-        final notification = _notifications[index];
-        return NotificationItemWidget(
-          notification: notification,
-          onTap: () => _markAsRead(notification.id),
+        final notification = notifications[index];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Card(
+            elevation: 0,
+            color: notification.isRead
+                ? AppTheme.getColor(context, Colors.grey.shade50, Colors.grey.shade800)
+                : AppTheme.getColor(context, Colors.white, Colors.grey.shade900),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: notification.isRead
+                    ? Colors.transparent
+                    : AppTheme.primaryColor.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: NotificationItemWidget(
+              notification: notification,
+              onTap: () => _markAsRead(notification.id),
+            ),
+          ),
         );
       },
     );
