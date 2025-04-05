@@ -17,22 +17,56 @@ class ExplorePage extends StatefulWidget {
   _ExplorePageState createState() => _ExplorePageState();
 }
 
-class _ExplorePageState extends State<ExplorePage> {
+class _ExplorePageState extends State<ExplorePage> with SingleTickerProviderStateMixin {
   late final UserRepository _userRepository;
   late final PlaceRepository _placeRepository;
+  late TabController _tabController;
   
   List<User> _users = [];
   List<Place> _places = [];
+  List<User> _filteredUsers = [];
+  List<Place> _filteredPlaces = [];
   String _searchQuery = '';
   bool _isLoading = true;
   String _errorMessage = '';
+  bool _showSearchResults = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _userRepository = sl<UserRepository>();
     _placeRepository = sl<PlaceRepository>();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    _searchController.addListener(_onSearchChanged);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      setState(() {
+        _showSearchResults = false;
+      });
+      _filterData(_searchQuery);
+    }
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+      _showSearchResults = _searchQuery.isNotEmpty;
+      _filterData(_searchQuery);
+    });
   }
 
   Future<void> _loadData() async {
@@ -49,6 +83,7 @@ class _ExplorePageState extends State<ExplorePage> {
         _users = users;
         _places = places;
         _isLoading = false;
+        _filterData('');
       });
     } catch (e) {
       setState(() {
@@ -59,6 +94,11 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   void _navigateToUserDetails(User user) {
+    setState(() {
+      _showSearchResults = false;
+      _searchController.text = user.username;
+    });
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -71,6 +111,11 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   void _navigateToPlaceDetails(Place place) {
+    setState(() {
+      _showSearchResults = false;
+      _searchController.text = place.name;
+    });
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -85,28 +130,38 @@ class _ExplorePageState extends State<ExplorePage> {
   void _filterData(String query) {
     setState(() {
       _searchQuery = query;
+      
+      // Filtrer les utilisateurs
+      if (query.isEmpty) {
+        _filteredUsers = _users;
+      } else {
+        _filteredUsers = _users.where((user) => 
+          user.username.toLowerCase().contains(query.toLowerCase()) ||
+          (user.email?.toLowerCase().contains(query.toLowerCase()) ?? false)
+        ).toList();
+      }
+      
+      // Filtrer les lieux
+      if (query.isEmpty) {
+        _filteredPlaces = _places;
+      } else {
+        _filteredPlaces = _places.where((place) => 
+          place.name.toLowerCase().contains(query.toLowerCase()) ||
+          place.category.toLowerCase().contains(query.toLowerCase()) ||
+          place.description.toLowerCase().contains(query.toLowerCase())
+        ).toList();
+      }
     });
   }
 
-  List<User> get _filteredUsers {
-    if (_searchQuery.isEmpty) {
-      return _users;
-    }
-    return _users.where((user) => 
-      user.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      (user.email?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
-    ).toList();
-  }
-
-  List<Place> get _filteredPlaces {
-    if (_searchQuery.isEmpty) {
-      return _places;
-    }
-    return _places.where((place) => 
-      place.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      place.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      place.description.toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _showSearchResults = false;
+      _filterData('');
+    });
+    FocusScope.of(context).unfocus();
   }
 
   @override
@@ -168,43 +223,36 @@ class _ExplorePageState extends State<ExplorePage> {
   Widget _buildExploreContent() {
     return Column(
       children: [
-        _buildSearchBar(),
+        _buildSearchAndTabs(),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: _loadData,
-            color: AppTheme.primaryColor,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section des utilisateurs
-                  _buildSectionHeader('Utilisateurs à découvrir', _filteredUsers.length),
-                  _buildUsersList(),
-                  
-                  // Divider
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: Divider(),
-                  ),
-                  
-                  // Section des lieux
-                  _buildSectionHeader('Lieux populaires', _filteredPlaces.length),
-                  _buildPlacesList(),
-                ],
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Tab Utilisateurs
+              RefreshIndicator(
+                onRefresh: _loadData,
+                color: AppTheme.primaryColor,
+                child: _showSearchResults && _searchQuery.isNotEmpty
+                    ? _buildUserSearchResults()
+                    : _buildUsersTab(),
               ),
-            ),
+              // Tab Lieux
+              RefreshIndicator(
+                onRefresh: _loadData,
+                color: AppTheme.primaryColor,
+                child: _showSearchResults && _searchQuery.isNotEmpty
+                    ? _buildPlaceSearchResults()
+                    : _buildPlacesTab(),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchAndTabs() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppTheme.getColor(
           context,
@@ -223,32 +271,141 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
         ],
       ),
-      child: TextField(
-        onChanged: _filterData,
-        decoration: InputDecoration(
-          hintText: 'Rechercher des utilisateurs ou des lieux...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _filterData('');
-                    FocusScope.of(context).unfocus();
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: AppTheme.getColor(
-            context,
-            Colors.white,
-            Colors.grey.shade800,
+      child: Column(
+        children: [
+          // Barre de recherche
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: _tabController.index == 0
+                    ? 'Rechercher des utilisateurs...'
+                    : 'Rechercher des lieux...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppTheme.getColor(
+                  context,
+                  Colors.white,
+                  Colors.grey.shade800,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          
+          // Tabs
+          TabBar(
+            controller: _tabController,
+            indicatorColor: AppTheme.primaryColor,
+            labelColor: AppTheme.primaryColor,
+            unselectedLabelColor: AppTheme.getColor(
+              context,
+              AppTheme.textSecondary,
+              AppTheme.darkTextSecondary,
+            ),
+            tabs: const [
+              Tab(
+                text: 'Utilisateurs',
+                icon: Icon(Icons.people),
+              ),
+              Tab(
+                text: 'Lieux',
+                icon: Icon(Icons.place),
+              ),
+            ],
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserSearchResults() {
+    if (_filteredUsers.isEmpty) {
+      return _buildEmptyListMessage('Aucun utilisateur ne correspond à votre recherche.');
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _filteredUsers.length,
+      itemBuilder: (context, index) {
+        final user = _filteredUsers[index];
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundImage: user.avatar != null && user.avatar!.isNotEmpty
+                ? NetworkImage(user.avatar!)
+                : null,
+            child: user.avatar == null || user.avatar!.isEmpty
+                ? Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : '?')
+                : null,
+          ),
+          title: Text(user.username),
+          subtitle: Text(user.email ?? ''),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () => _navigateToUserDetails(user),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaceSearchResults() {
+    if (_filteredPlaces.isEmpty) {
+      return _buildEmptyListMessage('Aucun lieu ne correspond à votre recherche.');
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _filteredPlaces.length,
+      itemBuilder: (context, index) {
+        final place = _filteredPlaces[index];
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: _getCategoryColor(place.category),
+            child: Icon(_getCategoryIcon(place.category), color: Colors.white, size: 20),
+          ),
+          title: Text(place.name),
+          subtitle: Text(place.category),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () => _navigateToPlaceDetails(place),
+        );
+      },
+    );
+  }
+
+  Widget _buildUsersTab() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Utilisateurs à découvrir', _filteredUsers.length),
+          _buildUsersList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlacesTab() {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Lieux populaires', _filteredPlaces.length),
+          _buildPlacesList(),
+        ],
       ),
     );
   }
@@ -365,5 +522,40 @@ class _ExplorePageState extends State<ExplorePage> {
         ],
       ),
     );
+  }
+  
+  // Fonctions utilitaires pour les couleurs et icônes des catégories
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'restaurant':
+        return Colors.orange;
+      case 'café':
+        return Colors.brown;
+      case 'bar':
+        return Colors.purple;
+      case 'événement':
+        return Colors.red;
+      case 'autre':
+        return Colors.teal;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'café':
+        return Icons.coffee;
+      case 'bar':
+        return Icons.local_bar;
+      case 'événement':
+        return Icons.event;
+      case 'autre':
+        return Icons.location_on;
+      default:
+        return Icons.place;
+    }
   }
 } 
