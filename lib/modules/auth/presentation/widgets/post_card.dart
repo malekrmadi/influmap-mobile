@@ -40,9 +40,13 @@ class PostCard extends StatefulWidget {
   State<PostCard> createState() => _PostCardState();
 }
 
-class _PostCardState extends State<PostCard> {
+class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin {
   bool _showComments = false;
+  bool _isLiked = false;
+  bool _isSaved = false;
   final TextEditingController _commentController = TextEditingController();
+  late AnimationController _likeAnimController;
+  late Animation<double> _likeAnimation;
   
   // Liste statique de commentaires pour démonstration
   final List<Comment> _comments = [
@@ -71,10 +75,26 @@ class _PostCardState extends State<PostCard> {
       createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _likeAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _likeAnimation = Tween<double>(begin: 1.0, end: 1.5).animate(
+      CurvedAnimation(
+        parent: _likeAnimController,
+        curve: Curves.elasticOut,
+      ),
+    );
+  }
   
   @override
   void dispose() {
     _commentController.dispose();
+    _likeAnimController.dispose();
     super.dispose();
   }
 
@@ -84,15 +104,41 @@ class _PostCardState extends State<PostCard> {
     });
   }
 
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+      if (_isLiked) {
+        _likeAnimController.forward().then((_) => _likeAnimController.reverse());
+      }
+    });
+    if (widget.onLike != null) {
+      widget.onLike!();
+    }
+  }
+
+  void _toggleSave() {
+    setState(() {
+      _isSaved = !_isSaved;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.getColor(context, Colors.white, Colors.black),
+        boxShadow: [
+          if (!isDarkMode)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -100,13 +146,70 @@ class _PostCardState extends State<PostCard> {
           _buildHeader(context, isDarkMode),
           
           // Post image
-          _buildPostImage(context),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              _buildPostImage(context),
+              // Double tap like animation
+              ScaleTransition(
+                scale: _likeAnimation,
+                child: Opacity(
+                  opacity: _likeAnimController.value,
+                  child: Icon(
+                    Icons.favorite,
+                    size: 100,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Action buttons
+          _buildActionButtons(context, isDarkMode),
+          
+          // Likes count
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              '128 J\'aime',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppTheme.getColor(context, AppTheme.textPrimary, AppTheme.darkTextPrimary),
+              ),
+            ),
+          ),
           
           // Post content
           _buildPostContent(context, isDarkMode),
           
-          // Actions (like, comment)
-          _buildActionButtons(context, isDarkMode),
+          // Comments count
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: GestureDetector(
+              onTap: _toggleComments,
+              child: Text(
+                'Voir les ${_comments.length} commentaires',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+                ),
+              ),
+            ),
+          ),
+          
+          // Post timestamp
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12, top: 4),
+            child: Text(
+              _formatTime(widget.post.expiresAt),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.getColor(context, AppTheme.textSecondary, AppTheme.darkTextSecondary),
+              ),
+            ),
+          ),
           
           // Comments section (conditionally visible)
           if (_showComments) _buildCommentsSection(context, isDarkMode),
@@ -117,19 +220,34 @@ class _PostCardState extends State<PostCard> {
   
   Widget _buildHeader(BuildContext context, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          // User avatar
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: widget.postUser?.avatar != null && widget.postUser!.avatar!.isNotEmpty
-                ? NetworkImage(widget.postUser!.avatar!)
-                : null,
-            child: widget.postUser?.avatar == null || widget.postUser!.avatar!.isEmpty
-                ? Icon(Icons.person, color: Colors.grey.shade600)
-                : null,
+          // User avatar with gradient border
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.primaryColor,
+                  Colors.purple,
+                  Colors.orange,
+                ],
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: widget.postUser?.avatar != null && widget.postUser!.avatar!.isNotEmpty
+                  ? NetworkImage(widget.postUser!.avatar!)
+                  : null,
+              child: widget.postUser?.avatar == null || widget.postUser!.avatar!.isEmpty
+                  ? Icon(Icons.person, color: Colors.grey.shade600, size: 20)
+                  : null,
+            ),
           ),
           const SizedBox(width: 12),
           // User and place info
@@ -137,23 +255,34 @@ class _PostCardState extends State<PostCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.postUser?.username ?? 'Utilisateur',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: AppTheme.getColor(
-                      context, 
-                      AppTheme.textPrimary, 
-                      AppTheme.darkTextPrimary
+                Row(
+                  children: [
+                    Text(
+                      widget.postUser?.username ?? 'Utilisateur',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.getColor(
+                          context, 
+                          AppTheme.textPrimary, 
+                          AppTheme.darkTextPrimary
+                        ),
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
                 Text(
                   widget.postPlace?.name ?? 'Lieu inconnu',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: AppTheme.getColor(
                       context, 
                       AppTheme.textSecondary, 
@@ -164,17 +293,19 @@ class _PostCardState extends State<PostCard> {
               ],
             ),
           ),
-          // Time
-          Text(
-            _formatTime(widget.post.expiresAt),
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.getColor(
-                context, 
-                AppTheme.textSecondary, 
-                AppTheme.darkTextSecondary
-              ),
+          // Menu
+          IconButton(
+            icon: const Icon(Icons.more_horiz),
+            iconSize: 20,
+            splashRadius: 20,
+            color: AppTheme.getColor(
+              context, 
+              AppTheme.textSecondary, 
+              AppTheme.darkTextSecondary
             ),
+            onPressed: () {
+              // Options menu
+            },
           ),
         ],
       ),
@@ -182,41 +313,75 @@ class _PostCardState extends State<PostCard> {
   }
   
   Widget _buildPostImage(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 250,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-      ),
-      child: Image.asset(
-        'assets/images/posts/post1.jpg',
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: Icon(
-              Icons.image_not_supported,
-              size: 50,
-              color: Colors.grey.shade400,
-            ),
-          );
-        },
+    return GestureDetector(
+      onDoubleTap: () {
+        if (!_isLiked) {
+          _toggleLike();
+        } else {
+          _likeAnimController.forward().then((_) => _likeAnimController.reverse());
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        height: 400,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+        ),
+        child: Image.asset(
+          'assets/images/posts/post1.jpg',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 50,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Image non disponible',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
   
   Widget _buildPostContent(BuildContext context, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Text(
-        widget.post.text,
-        style: TextStyle(
-          fontSize: 15,
-          height: 1.4,
-          color: AppTheme.getColor(
-            context, 
-            AppTheme.textPrimary, 
-            AppTheme.darkTextPrimary
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.4,
+            color: AppTheme.getColor(
+              context, 
+              AppTheme.textPrimary, 
+              AppTheme.darkTextPrimary
+            ),
           ),
+          children: [
+            TextSpan(
+              text: '${widget.postUser?.username ?? 'Utilisateur'} ',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: widget.post.text,
+            ),
+          ],
         ),
       ),
     );
@@ -224,67 +389,54 @@ class _PostCardState extends State<PostCard> {
   
   Widget _buildActionButtons(BuildContext context, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Comments count
-          Text(
-            '${_comments.length} commentaires',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.getColor(
-                context, 
-                AppTheme.textSecondary, 
-                AppTheme.darkTextSecondary
-              ),
+          // Like button
+          IconButton(
+            onPressed: _toggleLike,
+            icon: Icon(
+              _isLiked ? Icons.favorite : Icons.favorite_border,
+              color: _isLiked ? Colors.red : null,
+              size: 28,
             ),
+            splashRadius: 20,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
           ),
-          // Action buttons
-          Row(
-            children: [
-              // Like button
-              InkWell(
-                onTap: widget.onLike,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.getColor(
-                      context, 
-                      Colors.grey.shade200, 
-                      Colors.grey.shade800
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.favorite_border,
-                    color: AppTheme.primaryColor,
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Comment button
-              InkWell(
-                onTap: _toggleComments,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _showComments 
-                        ? AppTheme.primaryColor.withOpacity(0.2)
-                        : AppTheme.getColor(context, Colors.grey.shade200, Colors.grey.shade800),
-                  ),
-                  child: Icon(
-                    _showComments ? Icons.chat_bubble : Icons.chat_bubble_outline,
-                    color: AppTheme.primaryColor,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ],
+          // Comment button
+          IconButton(
+            onPressed: _toggleComments,
+            icon: Icon(
+              _showComments ? Icons.chat_bubble : Icons.chat_bubble_outline,
+              size: 24,
+            ),
+            splashRadius: 20,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+          ),
+          // Share button
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.send_outlined,
+              size: 24,
+            ),
+            splashRadius: 20,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+          ),
+          const Spacer(),
+          // Save button
+          IconButton(
+            onPressed: _toggleSave,
+            icon: Icon(
+              _isSaved ? Icons.bookmark : Icons.bookmark_border,
+              size: 28,
+            ),
+            splashRadius: 20,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -292,7 +444,7 @@ class _PostCardState extends State<PostCard> {
   }
   
   Widget _buildCommentsSection(BuildContext context, bool isDarkMode) {
-    return AnimatedContainer(
+    return AnimatedSize(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Column(
@@ -314,7 +466,7 @@ class _PostCardState extends State<PostCard> {
           
           // Add comment input
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 CircleAvatar(
@@ -322,7 +474,7 @@ class _PostCardState extends State<PostCard> {
                   backgroundColor: Colors.grey.shade200,
                   child: Icon(Icons.person, color: Colors.grey.shade600, size: 16),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
                     controller: _commentController,
@@ -337,7 +489,7 @@ class _PostCardState extends State<PostCard> {
                         ),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
@@ -346,25 +498,33 @@ class _PostCardState extends State<PostCard> {
                         Colors.grey.shade100, 
                         Colors.grey.shade800
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          Icons.send_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          // Logique pour ajouter un commentaire
+                          if (_commentController.text.trim().isNotEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Commentaire envoyé: ${_commentController.text}')),
+                            );
+                            _commentController.clear();
+                          }
+                        },
+                      ),
+                    ),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.getColor(
+                        context, 
+                        AppTheme.textPrimary, 
+                        AppTheme.darkTextPrimary
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    Icons.send_rounded,
-                    color: AppTheme.primaryColor,
-                  ),
-                  onPressed: () {
-                    // Logique pour ajouter un commentaire
-                    if (_commentController.text.trim().isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Commentaire envoyé: ${_commentController.text}')),
-                      );
-                      _commentController.clear();
-                    }
-                  },
                 ),
               ],
             ),
@@ -376,7 +536,7 @@ class _PostCardState extends State<PostCard> {
   
   Widget _buildCommentItem(BuildContext context, Comment comment, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -398,22 +558,35 @@ class _PostCardState extends State<PostCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Username and time
-                Row(
-                  children: [
-                    Text(
-                      comment.username,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppTheme.getColor(
-                          context, 
-                          AppTheme.textPrimary, 
-                          AppTheme.darkTextPrimary
-                        ),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.getColor(
+                        context, 
+                        AppTheme.textPrimary, 
+                        AppTheme.darkTextPrimary
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    children: [
+                      TextSpan(
+                        text: comment.username,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const TextSpan(text: ' '),
+                      TextSpan(
+                        text: comment.text,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                
+                // Comment actions
+                Row(
+                  children: [
                     Text(
                       _formatTime(comment.createdAt),
                       style: TextStyle(
@@ -425,24 +598,37 @@ class _PostCardState extends State<PostCard> {
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                
-                // Comment text
-                Text(
-                  comment.text,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.getColor(
-                      context, 
-                      AppTheme.textPrimary, 
-                      AppTheme.darkTextPrimary
+                    const SizedBox(width: 16),
+                    Text(
+                      'Répondre',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.getColor(
+                          context, 
+                          AppTheme.textSecondary, 
+                          AppTheme.darkTextSecondary
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
+          ),
+          
+          // Like comment button
+          IconButton(
+            icon: const Icon(Icons.favorite_border, size: 14),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            color: AppTheme.getColor(
+              context, 
+              AppTheme.textSecondary, 
+              AppTheme.darkTextSecondary
+            ),
+            onPressed: () {},
           ),
         ],
       ),
@@ -453,7 +639,9 @@ class _PostCardState extends State<PostCard> {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
     
-    if (difference.inDays > 0) {
+    if (difference.inDays > 6) {
+      return '${difference.inDays ~/ 7}sem';
+    } else if (difference.inDays > 0) {
       return '${difference.inDays}j';
     } else if (difference.inHours > 0) {
       return '${difference.inHours}h';
